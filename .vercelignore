@@ -1,4 +1,6 @@
-*
-!ui
-!ui/**
-!vercel.json
+package.json
+server.ts
+api/
+bun.lock
+src/
+tsconfig.json
