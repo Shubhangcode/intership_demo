@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NL → App Compiler | Interactive Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at top, #0f172a, #020617);
+      --card-bg: rgba(15, 23, 42, 0.65);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #06b6d4;
+      --accent-purple: #a855f7;
+      --accent-emerald: #10b981;
+      --accent-orange: #f97316;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-sans: 'Outfit', sans-serif;
+      --font-mono: 'Fira Code', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 2.2rem;
+      height: 2.2rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.25rem;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 1.35rem;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #ffffff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: var(--accent-cyan);
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    .main-container {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 450px 1fr;
+      gap: 2rem;
+      height: calc(100vh - 75px);
+    }
+
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .card-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .input-card {
+      padding: 1.25rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      background: rgba(2, 6, 23, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: none;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    textarea:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+    }
+
+    .btn-compile {
+      margin-top: 1rem;
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      color: white;
+      border: none;
+      padding: 0.85rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.35);
+      transition: all 0.3s ease;
+    }
+
+    .btn-compile:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .btn-compile:active {
+      transform: translateY(0);
+    }
+
+    .btn-compile:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .terminal-card {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .terminal-content {
+      flex: 1;
+      background: rgba(2, 6, 23, 0.7);
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      color: #cbd5e1;
+    }
+
+    .log-line {
+      line-height: 1.5;
+      opacity: 0;
+      animation: fadeIn 0.4s forwards;
+    }
+
+    .log-info { color: var(--text-muted); }
+    .log-stage { color: var(--accent-cyan); font-weight: 500; }
+    .log-success { color: var(--accent-emerald); }
+    .log-warn { color: var(--accent-orange); }
+    .log-error { color: #f43f5e; }
+
+    .explorer-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 768px) {
+      .explorer-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .file-tree {
+      border-right: 1px solid var(--card-border);
+      padding: 1rem;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.3);
+      border-bottom-left-radius: 16px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .file-item:hover {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-main);
+    }
+
+    .file-item.active {
+      background: rgba(6, 182, 212, 0.12);
+      color: var(--accent-cyan);
+      border-left: 3px solid var(--accent-cyan);
+      border-radius: 0 6px 6px 0;
+      padding-left: calc(0.65rem - 3px);
+    }
+
+    .file-icon {
+      font-size: 1rem;
+      width: 1.25rem;
+      text-align: center;
+    }
+
+    .code-viewer {
+      display: flex;
+      flex-direction: column;
+      background: rgba(2, 6, 23, 0.4);
+      overflow: hidden;
+      border-bottom-right-radius: 16px;
+    }
+
+    .code-header {
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .current-path {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+    }
+
+    .code-content {
+      flex: 1;
+      padding: 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      overflow: auto;
+      color: #e2e8f0;
+      white-space: pre;
+    }
+
+    .placeholder-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2rem;
+      gap: 1rem;
+    }
+
+    .placeholder-icon {
+      font-size: 3rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.25);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">λ</div>
+      <div>
+        <span class="logo-title">App Compiler</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">Visualizer</span>
+      </div>
+    </div>
+    <div class="badge">SANDBOX SIMULATOR</div>
+  </header>
+
+  <div class="main-container">
+    <div class="column">
+      <div class="card input-card">
+        <h3 style="margin-bottom: 0.75rem; font-size: 1rem; font-weight: 600;">Compile Natural Language into Code</h3>
+        <textarea id="prompt-input">Build a CRM with login, contacts, dashboard, role-based access for admins and reps, and a premium plan with payments. Admins can see analytics.</textarea>
+        <button id="btn-compile" class="btn-compile">
+          <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          Compile App
+        </button>
+      </div>
+
+      <div class="card terminal-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span style="color: var(--accent-cyan)">■</span> Compiler Pipeline Log
+          </div>
+          <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted)" id="compile-time">IDLE</span>
+        </div>
+        <div class="terminal-content" id="terminal-log">
+          <div class="log-line log-info">System initialized. Awaiting compile instruction...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="card" style="flex: 1; min-height: 0;">
+        <div class="card-header">
+          <div class="card-title">
+            <svg style="width: 18px; height: 18px; color: var(--accent-purple);" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            Generated Next.js Skeleton Explorer
+          </div>
+          <span class="badge" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: var(--accent-purple);">WORKSPACE</span>
+        </div>
+        
+        <div class="explorer-layout">
+          <div class="file-tree" id="file-tree-container">
+            <div class="placeholder-overlay" style="padding: 1rem;">
+              <span style="font-size: 0.8rem;">No files compiled yet</span>
+            </div>
+          </div>
+
+          <div class="code-viewer" id="code-viewer-container">
+            <div class="placeholder-overlay">
+              <div class="placeholder-icon">⚙</div>
+              <h3 style="font-size: 1.1rem; font-weight: 500;">Ready for Compilation</h3>
+              <p style="font-size: 0.85rem; max-width: 280px; line-height: 1.5;">Type your request on the left and click "Compile App" to generate and inspect code.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const promptInput = document.getElementById('prompt-input');
+    const compileBtn = document.getElementById('btn-compile');
+    const logContainer = document.getElementById('terminal-log');
+    const compileTimeLabel = document.getElementById('compile-time');
+    const fileTreeContainer = document.getElementById('file-tree-container');
+    const codeViewerContainer = document.getElementById('code-viewer-container');
+
+    let generatedWorkspace = {};
+
+    function log(message, type = 'info') {
+      const line = document.createElement('div');
+      line.className = `log-line log-${type}`;
+      line.innerText = message;
+      logContainer.appendChild(line);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    compileBtn.addEventListener('click', async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      compileBtn.disabled = true;
+      compileTimeLabel.innerText = "COMPILING...";
+      logContainer.innerHTML = '';
+      
+      log(`============================================================`, 'info');
+      log(`APP COMPILER — Starting Pipeline Simulation`, 'info');
+      log(`Prompt: "${prompt}"`, 'info');
+      log(`============================================================\n`, 'info');
+
+      await delay(1200);
+      log(`  [Stage 1] Parsing Natural Language to IntentSchema...`, 'stage');
+      const appName = prompt.match(/(?:CRM|SaaS|marketplace|tool|ecommerce|app)/i)?.[0] || 'MyCustomApp';
+      const isCRM = prompt.toLowerCase().includes('crm');
+      const isMarketplace = prompt.toLowerCase().includes('marketplace') || prompt.toLowerCase().includes('shop');
+      const isProject = prompt.toLowerCase().includes('project') || prompt.toLowerCase().includes('task');
+
+      const appType = isCRM ? 'crm' : isMarketplace ? 'marketplace' : 'saas';
+      await delay(1000);
+      log(`  ✓ Intent Extracted: "${appName}" (${appType})`, 'success');
+      log(`    Assumptions:`, 'info');
+      log(`      - Defaulting to PostgreSQL with Prisma client`, 'info');
+      log(`      - Role-based Access Control model required`, 'info');
+      if (prompt.toLowerCase().includes('payments')) {
+        log(`      - Premium plan integration uses Stripe-compliant architecture`, 'info');
+      }
+
+      await delay(1500);
+      log(`\n  [Stage 2] Designing System Architecture...`, 'stage');
+      await delay(800);
+      log(`  ✓ Created 4 primary architectural services`, 'success');
+      log(`  ✓ Main data models mapped (Users, Accounts, Entities)`, 'success');
+
+      await delay(1400);
+      log(`\n  [Stage 3] Generating Sub-Schemas (UI, API, DB, Auth)...`, 'stage');
+      await delay(800);
+      log(`  ✓ UI Config schema populated (4 responsive pages)`, 'success');
+      log(`  ✓ API Spec schema populated (6 endpoints)`, 'success');
+      log(`  ✓ DB Model relational schema constructed`, 'success');
+      log(`  ✓ Auth configuration rules set`, 'success');
+
+      await delay(1200);
+      log(`\n  [Stage 4] Performing Cross-Layer Validation...`, 'stage');
+      await delay(1000);
+      
+      log(`    ✗ [ui→api] UI page "dashboard" references non-existent API endpoint "/api/analytics/summary"`, 'warn');
+      await delay(1200);
+      log(`    ✓ Repaired ui schema layer: adjusted endpoint to "/api/analytics"`, 'success');
+      log(`  ✓ All cross-layer checks passed successfully ✓`, 'success');
+
+      await delay(1000);
+      log(`\n  [Stage 5] Generating Runnable Next.js App Skeleton...`, 'stage');
+      await delay(800);
+
+      generatedWorkspace = generateSimulatedApp(appName, prompt);
+      log(`  ✓ Skeleton build complete. Generated ${Object.keys(generatedWorkspace).length} files.`, 'success');
+      
+      log(`\n============================================================`, 'info');
+      log(`DONE compiling application!`, 'success');
+      log(`============================================================`, 'info');
+
+      compileTimeLabel.innerText = "SUCCESS";
+      compileBtn.disabled = false;
+
+      renderFileTree();
+    });
+
+    function generateSimulatedApp(appName, prompt) {
+      const nameLower = appName.toLowerCase();
+      const isCRM = prompt.toLowerCase().includes('crm');
+      const isProject = prompt.toLowerCase().includes('project') || prompt.toLowerCase().includes('task');
+
+      const files = {};
+
+      files["package.json"] = `{
+  "name": "${nameLower}-generated-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "next": "14.2.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "@prisma/client": "^5",
+    "next-auth": "^4"
+  },
+  "devDependencies": {
+    "prisma": "^5",
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18"
+  }
+}`;
+
+      files["prisma/schema.prisma"] = `generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  role        String    @default("USER")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  ${isCRM ? 'contacts    Contact[]' : isProject ? 'tasks       Task[]' : ''}
+}
+
+${isCRM ? `model Contact {
+  id          String   @id @default(cuid())
+  name        String
+  company     String
+  email       String
+  phone       String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}` : isProject ? `model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("TODO")
+  dueDate     DateTime?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}` : `model Item {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+}`}
+`;
+
+      files["app/api/contacts/route.ts"] = `import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    if (!body.name || !body.email) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Entity created successfully",
+      data: body
+    });
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+`;
+
+      files["app/dashboard/page.tsx"] = `"use client";
+import { useState } from "react";
+
+export default function DashboardPage() {
+  const [form, setForm] = useState({ name: "", email: "", company: "" });
+  const [message, setMessage] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      setMessage(data.success ? "Successfully Created Contact!" : "Error creating contact");
+    } catch {
+      setMessage("Network error");
+    }
+  }
+
+  return (
+    <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "2rem", marginBottom: "1.5rem" }}>${appName} Dashboard</h1>
+      
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>Name</label>
+          <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} style={{ padding: "0.5rem", width: "100%" }} />
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>Email</label>
+          <input value={form.email} onChange={e => setForm(p => ({...p, email: e.target.value}))} style={{ padding: "0.5rem", width: "100%" }} />
+        </div>
+        <div>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>Company</label>
+          <input value={form.company} onChange={e => setForm(p => ({...p, company: e.target.value}))} style={{ padding: "0.5rem", width: "100%" }} />
+        </div>
+        <button type="submit" style={{ padding: "0.75rem", background: "#06b6d4", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+          Submit Contact
+        </button>
+      </form>
+      {message && <p style={{ marginTop: "1rem", color: "#10b981" }}>{message}</p>}
+    </main>
+  );
+}
+`;
+
+      files["middleware.ts"] = `import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+
+export default withAuth(
+  function middleware(req) {
+    const role = req.nextauth?.token?.role;
+    if (req.nextUrl.pathname.startsWith("/admin") && role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
+    return NextResponse.next();
+  }
+);
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/admin/:path*"],
+};
+`;
+
+      files[".env.example"] = `DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
+NEXTAUTH_SECRET="super-secret-random-key"
+NEXTAUTH_URL="http://localhost:3000"
+`;
+
+      return files;
+    }
+
+    function renderFileTree() {
+      fileTreeContainer.innerHTML = '';
+      
+      Object.keys(generatedWorkspace).forEach((filePath) => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        
+        let icon = '📄';
+        if (filePath.endsWith('.prisma')) icon = '🔷';
+        if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) icon = '⚡';
+        if (filePath.endsWith('.json')) icon = '⚙️';
+
+        item.innerHTML = `<span class="file-icon">${icon}</span> ${filePath}`;
+        item.addEventListener('click', () => {
+          document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+          item.classList.add('active');
+          showCode(filePath);
+        });
+        
+        fileTreeContainer.appendChild(item);
+      });
+
+      const firstFile = Object.keys(generatedWorkspace)[0];
+      if (firstFile) {
+        fileTreeContainer.children[0].classList.add('active');
+        showCode(firstFile);
+      }
+    }
+
+    function showCode(filePath) {
+      const code = generatedWorkspace[filePath];
+      
+      const escapedCode = code
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      codeViewerContainer.innerHTML = `
+        <div class="code-header">
+          <span class="current-path">${filePath}</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">TypeScript / Auto-generated</span>
+        </div>
+        <div class="code-content">${escapedCode}</div>
+      `;
+    }
+  </script>
+
+</body>
+</html>
